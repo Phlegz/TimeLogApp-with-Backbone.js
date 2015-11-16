@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-framework="backbonejs">
+<head>
+  <meta charset="UTF-8">
+  <title>Time logs in Backbone.js</title>
+  <link rel="stylesheet" href="stylesheet/style.css">  
+</head>
+
+<body>
+
+  <!-- ========= -->
+  <!-- Your HTML -->
+  <!-- ========= -->
+
+  <section id="timelogapp">
+    <header id="header">
+      <h1>Tasks</h1>
+      <input id="new-task" placeholder="  What needs to be done?">
+    </header>
+    <section id="main">
+      <ul id="task-list"></ul>
+    </section>
+  </section>
+
+    <!-- Templates -->
+  <script type="text/template" id="item-template">
+    <div>
+      <input class="toggle" type="checkbox" <%= completed ? 'checked' : '' %>>
+      <label><%- title %></label>
+      <input class="edit" value="<%- title %>">
+      <button type="button" class="start">Start</button>
+      
+      <button type="button" class="finish">Finish</button>
+      <label></label>
+      <label id="duration"></label>
+      <button class="destroy" type="button"></button>
+    </div>
+  </script> 
+
+  <!-- ========= -->
+  <!-- Libraries -->
+  <!-- ========= -->
+
+  <script src="lib/jquery-1.11.3.js"></script>
+  <script src="lib/underscore.js" type="text/javascript"></script>
+  <script src="lib/backbone.js" type="text/javascript"></script>
+  <script src="lib/backbone.localStorage.js" type="text/javascript"></script>  
+
+  <!-- =============== -->
+  <!-- Javascript code -->
+  <!-- =============== -->
+
+  <script type="text/javascript">
+    // your JS code goes here
+
+
+    //--------------
+    // Models
+    //--------------
+
+    //--------------
+    // Timelog Model
+    //this model applies to each of the task items
+    //--------------
+    
+    var TimeLog = Backbone.Model.extend({
+      defaults: {
+        //start:'',
+        finish:'',
+        duration: 0,
+
+      },
+
+
+
+    });
+
+    //timelog = new TimeLog();
+
+    //--------------
+    // Timelogs Collections
+    //This collection applies to each of the task items
+    //--------------
+
+    var TimeLogList = Backbone.Collection.extend({
+      model: TimeLog,
+      localStorage: new Store("backbone-timelog"),  
+    });
+
+
+
+
+    //--------------
+    // Task Model
+    //--------------
+
+    var id =0
+    Task = Backbone.Model.extend({
+      initialize: function() {
+        this.timelogs = new TimeLogList();
+        this.on("change add",this.resetDuration,this )
+      },
+
+      resetDuration: function () {
+        var total = _.reduce(this.timelogs.pluck('duration'), function (a,b) {return a + b})
+        this.set({total_time: total})
+      },
+      toJSON: function () {
+        var json = Backbone.Model.prototype.toJSON.apply(this, arguments)
+        json.timelogs = this.timelogs.toJSON()
+        return json
+      },
+      startTime: function(){
+        var dt = new Date(); 
+        var time = dt.getHours() + ":" + dt.getMinutes();
+        var starttime = $("#start-time").html(time);
+        this.timelogs.save({start: starttime})
+        
+      },
+
+      finishTime: function(){
+        var dt = new Date(); 
+        var time = dt.getHours() + ":" + dt.getMinutes();
+        var finishtime = $("#finish-time").html(time);
+        this.timelogs.save({finish : finishtime})
+      },
+
+      defaults: {
+        title:'',
+        completed:false,
+        
+      },
+
+      toggle: function () {
+      this.save({
+        completed: !this.get('completed')
+      });
+      }
+
+    });
+
+    var task = new Task;
+
+    var timelog = new TimeLog;
+
+    //--------------
+    // Collections
+    //--------------
+    // The collection of Task is backed by *localStorage* instead of a remote
+    // server.
+
+    //--------------
+    // Tasks Collections
+    //--------------
+
+    var TaskList = Backbone.Collection.extend({
+      model: Task,
+      localStorage: new Store("backbone-timelog"),
+
+    })
+
+     taskList = new TaskList();
+
+
+    //--------------
+    // Views
+    //--------------
+
+    // renders individual todo items list (li)
+    TaskView = Backbone.View.extend({
+
+      tagName: 'li',
+      template: _.template($('#item-template').html()),
+      render: function(){
+        this.$el.html(this.template(this.model.toJSON()));
+        this.input = this.$('.edit');    
+        return this; // enable chained calls
+      },
+
+      initialize: function () {
+        this.model.on('change', this.render, this);
+        console.log("hello");
+        },
+
+      events: {
+        'click .toggle': 'toggleCompleted',
+        'dblclick label' : 'edit',
+        'click .destroy' : 'delete',
+        'click .start' : 'getStartTime',
+        'click .finish' : 'getFinishTime',
+        'keypress .edit' : 'updateOnEnter',
+        'blur .edit' : 'close',
+
+      },
+
+      toggleCompleted: function(){
+        this.model.toggle();
+      },
+      edit: function(){
+        this.$el.addClass('editing');
+        this.input.focus();
+      },
+      delete: function(){
+        this.$el.addClass('deletion');
+        this.model.destroy();
+      },
+
+      getStartTime: function(){
+        this.model.startTime();
+        this.$el.addClass("startOn"); //do not put it in the model
+      },
+
+      getFinishTime: function(){
+        this.model.finishTime();
+        this.$el.removeClass("startOn"); //do not put it in the model
+      },
+        
+      updateOnEnter: function(e){
+        if(e.which == 13){
+          this.close();
+        }
+       },
+      close: function(){
+        var value = this.input.val().trim();
+        if(value) {
+          this.model.save({title: value});
+        }
+        this.$el.removeClass('editing');
+      },
+
+
+
+    });
+
+    // renders the full list of task items 
+
+    TasksView = Backbone.View.extend({
+      el: "#timelogapp",
+      initialize: function () {
+        this.input = this.$('#new-task');
+        taskList.on('add', this.addOne, this);
+        taskList.on('reset', this.addAll, this);
+        taskList.fetch(); // Loads list from local storage
+        alert("Rendering the full list");
+      },
+
+      events: {
+        'keypress #new-task': 'createTaskOnEnter'
+      },
+      createTaskOnEnter: function(e){
+        if ( e.which !== 13 || !this.input.val().trim() ) { // ENTER_KEY = 13
+          return;
+        }
+        taskList.create(this.newAttributes());
+        this.input.val(''); // clean input box
+      },
+      addOne: function(task){
+        var view = new TaskView({model: task});
+        $('#task-list').append(view.render().el);
+      },
+      addAll: function(){
+        this.$('#task-list').html(''); // clean the todo list
+        taskList.each(this.addOne, this);
+      },
+      newAttributes: function(){
+        return {
+          title: this.input.val().trim(),
+          completed: false
+        }
+      }
+
+    });
+
+    AppView = new TasksView();
+  </script>
+  
+</body>
+</html>
+
+the problem should be on rendering model inside hte the view , item-template , check the way that view renders, maybe you need to add an attribute to your taks model to handle the timelog model
