@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Time logs in Backbone.js</title>
-  <link rel="stylesheet" href="css/style.css">  
+  <link rel="stylesheet" href="css/styletest.css">  
 </head>
 
 <body>
@@ -29,20 +29,22 @@
 
     <!-- Templates -->
   <script type="text/template" id="item-template">
-    <div>
-      <input class="toggle" type="checkbox" <%= completed ? 'checked' : '' %>>
-      <label><%- title %></label>
-      <input class="edit" value="<%- title %>">
+    
+      <input class="toggle" type="checkbox" <%= completed ? 'checked' : '' %> style="float:left; margin-left:10px;margin-top:7px">
+      <label id="title"><%- title %></label>
+      <input class="edit" value="<%- title %>" >
+      <label id="total-time"><%= total_time %></label>
+
       <% if (active) { %>
-      {<%= active.duration %>} - <button type="button" class="finish">Finish</button>
-      <% } else { %>
-      <button type="button" class="start">Start</button>
+      <label><%= active.duration %></label>  
+      <div class="finish"></div>
+      <% } 
+      else { %>
+      <div class="start"></div>
       <% } %>
-      
-      <label></label>
-      <label id="duration"><%= total_time %></label>
-      <button class="destroy" type="button"></button>
-    </div>
+
+      <div class="destroy"></div>
+    
   </script> 
 
   <!-- ========= -->

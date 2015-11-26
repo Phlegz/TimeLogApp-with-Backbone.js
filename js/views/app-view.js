@@ -20,18 +20,22 @@
         taskList.create(this.newAttributes());
         this.input.val(''); // clean input box
       },
+
+      addAll: function(){
+      this.$('#task-list').html(''); // clean the task list
+      taskList.each(this.addOne, this);
+      },
+
       addOne: function(task){
         var view = new TaskView({model: task});
         $('#task-list').append(view.render().el);
       },
-      addAll: function(){
-        this.$('#task-list').html(''); // clean the todo list
-        taskList.each(this.addOne, this);
-      },
+
       newAttributes: function(){
         return {
           title: this.input.val().trim(),
-          completed: false
+          completed: false,
+          total_time: 0
         }
       }
 
